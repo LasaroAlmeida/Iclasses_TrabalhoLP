@@ -9,6 +9,9 @@
 
 (provide value-of-program)
 
+
+(define list-classes '())
+
 ; value-of :: Exp -> ExpVal
 (define (value-of exp Δ)
   (match exp
@@ -52,5 +55,10 @@
      (begin
        ; you must collect all the classes declared and building its respectively environment
        ; execute the prog expression in the correct environment
+       ; você deve coletar todas as classes declaradas e construir seu respectivo ambiente
+       ; execute a expressão prog no ambiente correto
        (result-of stmt init-env))]))
 
+(struct object (class-name fields))
+(struct class (super-name field-names method-env))
+(struct method (vars body super-name fields))
