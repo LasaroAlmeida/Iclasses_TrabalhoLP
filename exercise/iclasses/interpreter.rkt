@@ -50,12 +50,7 @@
     [e (raise-user-error "unimplemented-construction: " e)]
     ))
 
-; (define (append-class class_name classe)
-;   (if (already_exists_class?  class_name classe)
-;      (raise-user-error "[ERROR] - Classe já existente!")
-;      (set! program_class (cons (cons class_name  classe) program_class)); adiciona classe no ambiente de classes do programa
-;    )
-; )
+
 (define (append-class class-name classe)
   (if (already_exists_class? class-name classe)
       (raise-user-error "Já existe uma classe com a mesma definição: " class-name)
@@ -63,9 +58,10 @@
         (set! program_class (cons (cons class-name classe) program_class))
         (display "Classe adicionada: ")
         (display class-name)
-        (newline))))
-
-
+        (newline)
+        )
+  )
+)
 
 (define (already_exists_class? class_name classe)
   (let ([old_class (search_class_in_program class_name)])
@@ -81,15 +77,20 @@
     #f
     (for ([class_ program_class])
       (if (equal? class_name (car class_))
-          (class_)
+          class_
           #f
       )
     )
   )
 )
-
-
-
+;  Tem erro aqui :
+(define (search_class nome)
+  (let ([classe (search_class_in_program nome)])
+    (display "teste") ; Isso vai imprimir "teste"
+    ; Faça algo com a classe se ela for encontrada
+    (if classe
+        classe
+        (raise-user-error "[ERROR] - Classe não encontrada"))))
 
 ; Execução do código começa aqui
 (define (value-of-program prog)
@@ -97,11 +98,16 @@
   (match prog
     [(ast:prog decls stmt)
      (begin
-       (append-class "object" (class #f '() '()))
+      (append-class "object" (class #f '() '()))
       (for ([decl decls])
-        ([display (ast:decl-name decl)])
-        )
-       
+       (let* ([nome (ast:var-name (ast:decl-name decl))]
+              [nome_super (ast:var-name (ast:decl-super decl))]
+              [fields_super (class-name_fields (search_class nome_super))]
+       )
+        (display (if (zero? 0) "fields_super" "TESTE"))
+       )
+        ; (display (ast:var-name (ast:decl-name decl)))
+      )
        ;(result-of stmt init-env)
-       )]))
+)]))
 
