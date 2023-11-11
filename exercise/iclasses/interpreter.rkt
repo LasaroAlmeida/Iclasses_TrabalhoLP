@@ -10,7 +10,7 @@
 (provide value-of-program)
 
 (struct object (class_name fields))
-(struct class (super_name fields method_env))
+(struct class (super_name name_fields methods))
 (struct method (vars body super_name fields))
 
 (define program_class '())
@@ -50,46 +50,42 @@
     [e (raise-user-error "unimplemented-construction: " e)]
     ))
 
-#;(define (append-class class_name class_list)
-  ;(if (class-exists?  class_name class_list)
-   ;   (raise-user-error "[ERROR] - Classe já existente!")
-    ;  (set! program_class (cons (cons class_name  class_list) program_class)); adiciona classe no ambiente de classes do programa
-   ;)
-  (display (search_class_in_program class_name))
+; (define (append-class class_name classe)
+;   (if (already_exists_class?  class_name classe)
+;      (raise-user-error "[ERROR] - Classe já existente!")
+;      (set! program_class (cons (cons class_name  classe) program_class)); adiciona classe no ambiente de classes do programa
+;    )
+; )
+(define (append-class class-name classe)
+  (if (already_exists_class? class-name classe)
+      (raise-user-error "Já existe uma classe com a mesma definição: " class-name)
+      (begin
+        (set! program_class (cons (cons class-name classe) program_class))
+        (display "Classe adicionada: ")
+        (display class-name)
+        (newline))))
+
+
+
+(define (already_exists_class? class_name classe)
+  (let ([old_class (search_class_in_program class_name)])
+    (and old_class 
+      (equal? (class-methods old_class) (class-methods classe))
+      (equal? (class-name_fields old_class) (class-name_fields classe))
+    )
+  )
 )
-(define (append-class class_name class_list)
-  (let ([result (search_class_in_program class_name)])
-    (display result)))
-
-
-#;(define (class-exists? class_name class_list)
-  (cond
-    [(null? program_class) #f] ; Se a lista está vazia, a classe não existe
-    [else
-     (let* ([]
-            [current-class (car class_list)]
-            [current-class_name (car current-class)]
-            [current-fields (cadr current-class)]
-            [current-methods (caddr current-class)])
-       (if (and (equal? class_name current-class_name)
-                (equal? (class-fields current-class) current-fields)
-                (equal? (class-method_env current-class) current-methods))
-           #t ; A classe existe
-           (class-exists? class_name (cdr class_list))))]
-    ))
-
-
-
-
-
 
 (define (search_class_in_program class_name)
-  (for ([class program_class])
-    (if (equal? class_name (car class))
-        class
-        "teste"
-       )
-   )
+  (if (null? program_class)
+    #f
+    (for ([class_ program_class])
+      (if (equal? class_name (car class_))
+          (class_)
+          #f
+      )
+    )
+  )
 )
 
 
@@ -101,16 +97,11 @@
   (match prog
     [(ast:prog decls stmt)
      (begin
-       ;(append-class "object" (class #f '() '()))
-      (display (search_class_in_program "object"))
-      ; (for ([decl decls])
-       ;  ([print (ast:decl-name decl)])
-       ; you must collect all the classes declared and building its respectively environment
-       ; execute the prog expression in the correct environment
-       ; você deve coletar todas as classes declaradas e construir seu respectivo ambiente
-       ; execute a expressão prog no ambiente correto
-        ; )
+       (append-class "object" (class #f '() '()))
+      (for ([decl decls])
+        ([display (ast:decl-name decl)])
+        )
+       
        ;(result-of stmt init-env)
-       )
-     ]))
+       )]))
 
