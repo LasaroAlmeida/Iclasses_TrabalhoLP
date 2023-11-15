@@ -46,7 +46,8 @@
                 [fields (map (λ (field-name) (newref null)) field-names)])
             (object c fields))
           ])
-      (apply-method (find-method c "initialize") obj args-with-value)
+      ; (apply-method (find-method c "initialize") obj args-with-value)
+       (display (if (zero? 0) (find-method c "initialize") "TESTE"))
       obj)
     ]
     [e (raise-user-error "unimplemented-value-of-construction: " e)]))

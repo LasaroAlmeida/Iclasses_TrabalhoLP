@@ -27,65 +27,118 @@
     [(ast:if e1 e2 e3) (if (value-of e1 Δ) (value-of e2 Δ) (value-of e3 Δ))]
     [(ast:var v) (deref (apply-env Δ v))] ; esta implementação só funciona para variáveis imutáveis
     [(ast:let (ast:var x) e1 e2) (value-of e2 (extend-env x (value-of e1 Δ) Δ))]
-    [(ast:send e (ast:var mth) args) (display "send expression unimplemented")]
-    [(ast:super (ast:var c) args) (display "super expression unimplemented")]
-    [(ast:self) ((apply-env Δ "self"))]
+    ; [(ast:send e (ast:var mth) args) (display "send expression unimplemented")]
+    [(ast:send e (ast:var mth) args) 
+                (let* ([value_args (apply-value-of args Δ)]
+                      [objeto (value-of e Δ)])
+                      (apply_method (search_method (object-class_name objeto) mth) objeto value_args)
+                )
+                ]
+    ; [(ast:super (ast:var c) args) (display "super expression unimplemented")]
+    [(ast:super (ast:var c) args) (let* ([value_args (apply-value-of args Δ)]
+                      [objeto (apply-env Δ "self")])
+                      (apply_method (search_method (apply-env Δ "super")  (ast:var-name args)) objeto value_args)
+                )]
+    [(ast:self) (apply-env Δ "self")]
     ; [(ast:new (ast:var c) args) (display "new expression unimplemented")]
     [(ast:new (ast:var c) args) 
-        (begin (
-            (display (if (zero? 0) c "TESTE"))
-            (newline)
-     (let* ([value_args (apply-value-of args Δ)]
-            [obj (new_object c value_args)]
-            )
-          (apply_method (search_method c "initialize") obj value_args))
-        ))
-    ]
-    [e (raise-user-error "unimplemented-construction: " e)]
-    ))
-
-
-(define (new_object class_name value_args)
-  (let* ([classe (search_class class_name)])
-    (if classe
-        (let* ( [name_fields (class-name_fields classe)]
-                [fields (map (lambda (f_name) (newref null)) name_fields)]
+      (begin (display "new: ")
+      (display c)
+        (newline)
+        ; (display (if (zero? 0) c "TESTE"))
+        ; (newline)
+        (let* ([value_args (apply-value-of args Δ)]
+               [objeto (new_object c value_args)]
               )
-              (
-                (object class_name fields)
-              )
+              ; (display (apply_method (search_method c "initialize") obj value_args))
+              (apply_method (search_method c "initialize") objeto value_args)
+              objeto
+              ; (display (if (zero? 0) (method-super_name(search_method c "initialize")) "TESTE"))
+              ; (display (if (zero? 0) (method-super-name (find-method c "initialize")) "TESTE"))
         )
-        (raise-user-error "[ERROR] - Classe não encontrada: " class_name)
+      )
+    ]
+    [e (raise-user-error "unimplemented-construction: " e)]))
+
+
+(define (apply_method method self args)
+  (begin 
+    (display "apply_method: ")
+    (display (if (zero? 0) method "TESTE"))
+    (newline)
+  (let* ([args-with-refs (map newref args)] ; Coloca os valores em memória e obtém referências para eles.
+         [extended-env (extend-env "self" self
+                                   (extend-env "super" (method-super_name method)
+                                               empty-env))]
+         [method-env (bind-vars (method-vars method)
+                                args-with-refs
+                                (method-fields method)
+                                (object-fields self)
+                                extended-env)])
+    (result-of (method-body method) method-env))
     )
-  )
 )
 
-(define (search_method class_name method_name)
-  (let* (
-          [classe (search_class class_name)]
-          [methods (class-methods)]
-  )
-        ()
-  )
-)
+
+(define (bind-vars vars values method-fields object-fields env)
+  (for ([var vars] [val values])
+    (set! env (extend-env var val env)))
+  env)
+
 
 (define (apply-value-of exps Δ)
   (map (lambda (exp) (value-of exp Δ)) exps))
 
+(define (new_object class_name value_args)
+    (let* ([name_fields (class-name_fields (search_class class_name))]
+           [fields (map (lambda (f_name) (newref null)) name_fields)]
+          )
+          (object class_name fields)
+    )
+)
 
+(define (search_method class_name method_name)
+    (let ([methods (class-methods (search_class class_name))])
+      (let ([found-method (assoc method_name methods)])
+        (if found-method
+           (begin 
+           (display "METHODS: ")
+           (display methods)
+          ;  (newline)
+          ;  (display "found-method: ")
+          ;  (display found-method)
+          ;  (newline)
+          ;  (display "car:")
+          ;  (display (car found-method))
+          ;  (newline)
+          ;  (display "cdr: ")
+          ;  (display (cdr found-method))
+          ;  (newline)
+          ;  (display "cadr: ")
+          ;  (display (cadr found-method))
+          ;  (newline)
+          ;  (display "END")
+             (cadr found-method))
+            (raise-user-error "[ERROR] - Método não encontrado: " method_name)
+        )
+      )
+    )
+)
 
 ; result-of :: Stmt -> Env -> State -> State
 (define (result-of stmt Δ)
   (match stmt
     [(ast:assign (ast:var x) e) (begin
-                    (display "assign")
+                    (display "assign:")
+                    (display x)
                     (newline)
                     (setref! (apply-env Δ x) (value-of e Δ)) 42)]
     [(ast:print e) (display (value-of e Δ))
                    (newline)]
     [(ast:return e) (value-of e Δ)]
     [(ast:block stmts) (begin 
-                              (display "block")
+                              (display "block:   ")
+                              (display stmts)
                               (newline)
                               (for ([l stmts]) (result-of l Δ))
                         )]
@@ -95,15 +148,24 @@
                             (result-of s Δ)
                             (result-of stmt Δ)
                           )
-                          ('end)
+                          'end
                       )]
     [(ast:local-decl (ast:var x) s) (begin 
         (display "local-decl")
+        (display x)
         (newline)
         (result-of s (extend-env x (newref 'empty) Δ))
         )]
-    [(ast:send e (ast:var mth) args) (display "command send unimplemented")]
-    [(ast:super (ast:var c) args) (display "command super unimplemented")]
+    [(ast:send e (ast:var mth) args) 
+                (let ([value_args (apply-value-of args Δ)]
+                      [objeto (value-of e Δ)])
+                    (apply_method (search_method (object-class_name objeto) mth) objeto value_args)
+                )]
+    ; [(ast:super (ast:var c) args) (display "command super unimplemented")]
+    [(ast:super (ast:var c) args) (let* ([value_args (apply-value-of args Δ)]
+                      [objeto (apply-env Δ "self")])
+                      (apply_method (search_method (apply-env Δ "super")  (ast:var-name args)) objeto value_args)
+                )]
     [e (raise-user-error "unimplemented-construction: " e)]
     ))
 
@@ -187,14 +249,11 @@
        (let* ([nome (ast:var-name (ast:decl-name decl))] ; Nome da Classe
               [nome_super (ast:var-name (ast:decl-super decl))] ; Nome da Super-classe
               ; [fields_super (class-name_fields (search_class nome_super))]
-
               ; Nome Fields da classe atual e da super-classe
               [fields (merge_fields (map ast:var-name (ast:decl-fields decl)) (class-name_fields (search_class nome_super)))] 
               [metodos (create_methods (ast:decl-methods decl) nome_super fields)]
               [classe (class nome_super fields metodos)]
               )
-      ;  (print-program-class)
-        ; (display (if (zero? 0) classe "TESTE"))
         (append_class nome classe)
        )
       )
