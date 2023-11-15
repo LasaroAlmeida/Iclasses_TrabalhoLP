@@ -51,15 +51,15 @@
     ))
 
 
-(define (append-class class-name classe)
+(define (append_class class-name classe)
   (if (already_exists_class? class-name classe)
-      (raise-user-error "Já existe uma classe com a mesma definição: " class-name)
+      (raise-user-error "[ERROR] - A Classe já existe - " class-name)
       (begin
         (set! program_class (cons (cons class-name classe) program_class))
         (display "Classe adicionada: ")
         (display class-name)
         (newline)
-        )
+      )
   )
 )
 
@@ -72,25 +72,57 @@
   )
 )
 
+
+
 (define (search_class_in_program class_name)
   (if (null? program_class)
-    #f
-    (for ([class_ program_class])
-      (if (equal? class_name (car class_))
-          class_
-          #f
-      )
+      #f
+      (for/or ([class_ program_class])
+        (if (equal? class_name (car class_))
+            (cdr class_)
+            #f))))
+
+(define (search_class class_name)
+  (let ([classe (search_class_in_program class_name)])
+    (if classe
+        classe
+        (raise-user-error "[ERROR] - Classe não encontrada: " class_name)
     )
   )
 )
-;  Tem erro aqui :
-(define (search_class nome)
-  (let ([classe (search_class_in_program nome)])
-    (display "teste") ; Isso vai imprimir "teste"
-    ; Faça algo com a classe se ela for encontrada
-    (if classe
-        classe
-        (raise-user-error "[ERROR] - Classe não encontrada"))))
+
+(define (get_name_fields fields)
+  (map ast:var-name fields))
+
+
+(define (print-program-class)
+  (for ([class program_class])
+    (displayln class)))
+
+
+(define (merge_fields fields super-fields)
+  (map (lambda (field)
+         (if (member field super-fields)
+             (string-append field "$S")
+             field))
+       fields))
+
+; (define (create_methods methods_decl super_name fields)
+;   ()  
+; )
+
+(define (create_methods m-decls nome_super fields)
+  (define (create_method_aux m-decl)
+    (list
+     (ast:var-name (ast:method-name m-decl))
+     (method (map ast:var-name (ast:method-params m-decl)) (ast:method-body m-decl) nome_super fields))
+  )
+  (append
+   (map create_method_aux m-decls)
+   (class-methods (search_class nome_super)))
+)
+
+
 
 ; Execução do código começa aqui
 (define (value-of-program prog)
@@ -98,16 +130,22 @@
   (match prog
     [(ast:prog decls stmt)
      (begin
-      (append-class "object" (class #f '() '()))
+      (append_class "object" (class #f '() '()))
       (for ([decl decls])
-       (let* ([nome (ast:var-name (ast:decl-name decl))]
-              [nome_super (ast:var-name (ast:decl-super decl))]
-              [fields_super (class-name_fields (search_class nome_super))]
+       (let* ([nome (ast:var-name (ast:decl-name decl))] ; Nome da Classe
+              [nome_super (ast:var-name (ast:decl-super decl))] ; Nome da Super-classe
+              ; [fields_super (class-name_fields (search_class nome_super))]
+
+              ; Nome Fields da classe atual e da super-classe
+              [fields (merge_fields (map ast:var-name (ast:decl-fields decl)) (class-name_fields (search_class nome_super)))] 
+
+              [metodos (create_methods (ast:decl-methods decl) nome_super fields)]
+              [classe (class nome_super fields metodos)]
+              )
+      ;  (print-program-class)
+        ; (display (if (zero? 0) fields "TESTE"))
+        (append_class nome classe)
        )
-        (display (if (zero? 0) "fields_super" "TESTE"))
-       )
-        ; (display (ast:var-name (ast:decl-name decl)))
       )
        ;(result-of stmt init-env)
 )]))
-

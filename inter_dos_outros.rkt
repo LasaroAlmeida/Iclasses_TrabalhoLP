@@ -168,5 +168,7 @@
                 ; pega os metodos do decl; chama o merge-method passando os metodos, o super-name e os fields; 
                 [methods (merge-method (ast:decl-methods decl) super-name fields)]
                 [class (class super-name fields methods)])
-            (add-class class-name class)))
-        (result-of stmt init-env))])) ; Avalia o stmt, é quando não há classes no programa. 
+            ; (add-class class-name class)
+            ))
+        ; (result-of stmt init-env)
+        )])) ; Avalia o stmt, é quando não há classes no programa. 
