@@ -25,30 +25,88 @@
     [(ast:zero? e) (zero? (value-of e Δ))]
     [(ast:not e) (not (value-of e Δ))]
     [(ast:if e1 e2 e3) (if (value-of e1 Δ) (value-of e2 Δ) (value-of e3 Δ))]
-    [(ast:var v) (apply-env Δ v)] ; esta implementação só funciona para variáveis imutáveis
+    [(ast:var v) (deref (apply-env Δ v))] ; esta implementação só funciona para variáveis imutáveis
     [(ast:let (ast:var x) e1 e2) (value-of e2 (extend-env x (value-of e1 Δ) Δ))]
     [(ast:send e (ast:var mth) args) (display "send expression unimplemented")]
     [(ast:super (ast:var c) args) (display "super expression unimplemented")]
-    [(ast:self) (display "self expression unimplemented")]
-    [(ast:new (ast:var c) args) (display "new expression unimplemented")]
+    [(ast:self) ((apply-env Δ "self"))]
+    ; [(ast:new (ast:var c) args) (display "new expression unimplemented")]
+    [(ast:new (ast:var c) args) 
+        (begin (
+            (display (if (zero? 0) c "TESTE"))
+            (newline)
+     (let* ([value_args (apply-value-of args Δ)]
+            [obj (new_object c value_args)]
+            )
+          (apply_method (search_method c "initialize") obj value_args))
+        ))
+    ]
     [e (raise-user-error "unimplemented-construction: " e)]
     ))
+
+
+(define (new_object class_name value_args)
+  (let* ([classe (search_class class_name)])
+    (if classe
+        (let* ( [name_fields (class-name_fields classe)]
+                [fields (map (lambda (f_name) (newref null)) name_fields)]
+              )
+              (
+                (object class_name fields)
+              )
+        )
+        (raise-user-error "[ERROR] - Classe não encontrada: " class_name)
+    )
+  )
+)
+
+(define (search_method class_name method_name)
+  (let* (
+          [classe (search_class class_name)]
+          [methods (class-methods)]
+  )
+        ()
+  )
+)
+
+(define (apply-value-of exps Δ)
+  (map (lambda (exp) (value-of exp Δ)) exps))
+
+
 
 ; result-of :: Stmt -> Env -> State -> State
 (define (result-of stmt Δ)
   (match stmt
-    [(ast:assign (ast:var x) e) (display "assignment unimplemented")]
+    [(ast:assign (ast:var x) e) (begin
+                    (display "assign")
+                    (newline)
+                    (setref! (apply-env Δ x) (value-of e Δ)) 42)]
     [(ast:print e) (display (value-of e Δ))
-                   #;(display "print unimplemented")]
+                   (newline)]
     [(ast:return e) (value-of e Δ)]
-    [(ast:block stmts) (display "block unimplemented")]
-    [(ast:if-stmt e s1 s2) (display "if statment unimplemented")]
-    [(ast:while e s) (display "while unimplemented")]
-    [(ast:local-decl (ast:var x) s) (display "local var declaration unimplemented")]
+    [(ast:block stmts) (begin 
+                              (display "block")
+                              (newline)
+                              (for ([l stmts]) (result-of l Δ))
+                        )]
+    [(ast:if-stmt e s1 s2) (if (value-of e Δ) (result-of s1 Δ) (result-of s2 Δ))]
+    [(ast:while e s) (if (value-of e Δ)
+                          (begin
+                            (result-of s Δ)
+                            (result-of stmt Δ)
+                          )
+                          ('end)
+                      )]
+    [(ast:local-decl (ast:var x) s) (begin 
+        (display "local-decl")
+        (newline)
+        (result-of s (extend-env x (newref 'empty) Δ))
+        )]
     [(ast:send e (ast:var mth) args) (display "command send unimplemented")]
     [(ast:super (ast:var c) args) (display "command super unimplemented")]
     [e (raise-user-error "unimplemented-construction: " e)]
     ))
+
 
 
 (define (append_class class-name classe)
@@ -91,8 +149,6 @@
   )
 )
 
-(define (get_name_fields fields)
-  (map ast:var-name fields))
 
 
 (define (print-program-class)
@@ -107,9 +163,6 @@
              field))
        fields))
 
-; (define (create_methods methods_decl super_name fields)
-;   ()  
-; )
 
 (define (create_methods m-decls nome_super fields)
   (define (create_method_aux m-decl)
@@ -121,7 +174,6 @@
    (map create_method_aux m-decls)
    (class-methods (search_class nome_super)))
 )
-
 
 
 ; Execução do código começa aqui
@@ -138,14 +190,13 @@
 
               ; Nome Fields da classe atual e da super-classe
               [fields (merge_fields (map ast:var-name (ast:decl-fields decl)) (class-name_fields (search_class nome_super)))] 
-
               [metodos (create_methods (ast:decl-methods decl) nome_super fields)]
               [classe (class nome_super fields metodos)]
               )
       ;  (print-program-class)
-        ; (display (if (zero? 0) fields "TESTE"))
+        ; (display (if (zero? 0) classe "TESTE"))
         (append_class nome classe)
        )
       )
-       ;(result-of stmt init-env)
+       (result-of stmt init-env)
 )]))

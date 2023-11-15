@@ -36,6 +36,8 @@
       (apply-method (find-method (apply-env Δ "super") (ast:var-name args)) obj args-with-value ))
     ]
     [(ast:self) (apply-env Δ "self")]
+
+    
     [(ast:new (ast:var c) args)
       (let* ([args-with-value (map-value-of args Δ)]
           [obj 
@@ -168,7 +170,7 @@
                 ; pega os metodos do decl; chama o merge-method passando os metodos, o super-name e os fields; 
                 [methods (merge-method (ast:decl-methods decl) super-name fields)]
                 [class (class super-name fields methods)])
-            ; (add-class class-name class)
+            (add-class class-name class)
             ))
-        ; (result-of stmt init-env)
+        (result-of stmt init-env)
         )])) ; Avalia o stmt, é quando não há classes no programa. 
