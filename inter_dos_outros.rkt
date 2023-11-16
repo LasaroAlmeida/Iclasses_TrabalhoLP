@@ -39,23 +39,40 @@
 
     
     [(ast:new (ast:var c) args)
+      (begin  (display c)
+        (newline)
+        (display "args: ")
+        (display (if (zero? 0) args "TESTE"))
+        (newline)
       (let* ([args-with-value (map-value-of args Δ)]
           [obj 
             (let* ([class (find-class c)]
                 [field-names (class-field-names class)]
                 [fields (map (λ (field-name) (newref null)) field-names)])
-            (object c fields))
+            (
+              begin 
+              (display "name_fields: ")
+              (display field-names)
+              (newline)
+              (display "fields ")
+              (display fields)
+              (newline)
+              (object c fields)))
           ])
       ; (apply-method (find-method c "initialize") obj args-with-value)
        (display (if (zero? 0) (find-method c "initialize") "TESTE"))
-      obj)
+      obj))
     ]
     [e (raise-user-error "unimplemented-value-of-construction: " e)]))
 
 ; result-of :: Stmt -> Env -> State -> State
 (define (result-of stmt Δ)
   (match stmt
-    [(ast:assign (ast:var x) e) (begin (setref! (apply-env Δ x) (value-of e Δ)) 42)]
+    [(ast:assign (ast:var x) e) (begin
+                    (display "assign:")
+                    (display x)
+                    (newline)
+            (setref! (apply-env Δ x) (value-of e Δ)) 42)]
     [(ast:print e) 
       (display (value-of e Δ))
       (newline)]
@@ -111,12 +128,42 @@
        fields))
 
 (define (append-field-names super-fields self-fields) ; faz a união das duas listas mas trata quando algum field já existia no pai
-  (foldr (lambda (field acc)
+  (begin 
+          (display "self-fields:")     
+          (display self-fields)     
+          (newline)
+          (display "super-fields:")     
+          (display  super-fields)     
+          (newline)
+
+          (display "*******************************************")     
+    (let* ([ zedamanga (foldr (lambda (field acc)
            (if (member field acc) ; se já está na super-fields
                (append acc (list (string-append field "%1"))) ; então coloca um %1 no fim do nome para não dar conflito
                (append acc (list field)))) ; caso contrário, só adiciona no acumulador
          self-fields
-         super-fields))
+         super-fields)])
+          (begin 
+            (display "Ze da manga:")     
+          (display zedamanga)     
+          (newline)
+          (display "self-fields:")     
+          (display self-fields)     
+          (newline)
+          (display "super-fields:")     
+          (display  super-fields)     
+          (newline)
+          zedamanga
+          )
+         )
+  ))
+; (define (append-field-names super-fields self-fields) ; faz a união das duas listas mas trata quando algum field já existia no pai
+;   (foldr (lambda (field acc)
+;            (if (member field acc) ; se já está na super-fields
+;                (append acc (list (string-append field "%1"))) ; então coloca um %1 no fim do nome para não dar conflito
+;                (append acc (list field)))) ; caso contrário, só adiciona no acumulador
+;          self-fields
+;          super-fields))
 
 (define (merge-method m-decls super-name fields)
   (append
@@ -129,17 +176,36 @@
    (method (map ast:var-name (ast:method-params m-decl)) (ast:method-body m-decl) super-name fields)))
 
 (define (apply-method method self args)
-  (let* ([args-with-refs (map newref args)]
+  (
+    begin 
+    (newline)
+    (display "apply_method: ")
+    (display (if (zero? 0) args "TESTE"))
+    (newline)
+    (let* ([args-with-refs (map newref args)]
          [extended-env (extend-env "self" self
                                    (extend-env "super" (method-super-name method)
                                                empty-env))]
          [method-env (bind-vars (method-fields method)
                                        (object-fields self)
                                        extended-env)])
+    (
+      begin 
+    (display "AQU :")
+    (display (if (zero? 0) (method-fields method) "TESTE"))
+    ; (newline)                      
+    (display (if (zero? 0) (object-fields self) "TESTE"))
+    ; ; (newline)   
+    ; (display (if (zero? 0) (method-vars method) "TESTE"))
+    ; ; (newline)                      
+    ; (display (if (zero? 0) args-with-refs "TESTE")
+    ; )
+    (newline)
     (result-of (method-body method)
                (bind-vars (method-vars method)
                                  args-with-refs
-                                 method-env))))
+                                 method-env)))
+    )))
 
 (define (bind-vars vars values env)
   (for ([var vars] [val values])
@@ -148,10 +214,13 @@
 
 (define (find-method class-name method-name)
   (let ([m-env (class-method-env (find-class class-name))])
-    (let ([maybe-pair (assoc method-name m-env)])
+    (begin 
+           (display "METHODS: ")
+           (display m-env)
+      (let ([maybe-pair (assoc method-name m-env)])
       (if (pair? maybe-pair)
           (cadr maybe-pair)
-          (raise-user-error "Método não encontrado: " method-name)))))
+          (raise-user-error "Método não encontrado: " method-name))))))
 
 (define (map-value-of exps Δ)
   (map (λ (exp) (value-of exp Δ)) exps))
