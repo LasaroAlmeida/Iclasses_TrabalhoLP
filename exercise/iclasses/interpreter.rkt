@@ -11,7 +11,7 @@
 
 (struct object (class_name fields))
 (struct class (super_name name_fields methods))
-(struct method (vars body super_name fields))
+(struct method (arguments body super_name fields))
 
 (define program_class '())
 
@@ -24,7 +24,7 @@
     [(ast:zero? e) (zero? (value-of e Δ))]
     [(ast:not e) (not (value-of e Δ))]
     [(ast:if e1 e2 e3) (if (value-of e1 Δ) (value-of e2 Δ) (value-of e3 Δ))]
-    [(ast:var v) (deref (apply-env Δ v))] ; esta implementação só funciona para variáveis imutáveis
+    [(ast:var v) (deref (apply-env Δ v))]
     [(ast:let (ast:var x) e1 e2) (value-of e2 (extend-env x (newref (value-of e1 Δ)) Δ))]
     [(ast:send e (ast:var mth) args) 
                 (let* ([value_args (apply-value-of args Δ)]
@@ -46,10 +46,10 @@
     [e (raise-user-error "unimplemented-construction: " e)]))
 
 (define (apply_method method self args)
-  (let* ([args-refs (map newref args)] ; Coloca os valores em memória e obtém referências para eles.
+  (let* ([args-refs (map newref args)]
          [class_env (extend-env "self" self (extend-env "super" (method-super_name method) empty-env))]
-         [method_env (bind-vars (method-fields method) (object-fields self) class_env)]; nome campos com os endereços de memória
-         [method_env_vars (bind-vars (method-vars method) args-refs method_env)]
+         [method_env (bind-vars (method-fields method) (object-fields self) class_env)]
+         [method_env_vars (bind-vars (method-arguments method) args-refs method_env)]
           )
     (result-of (method-body method) method_env_vars))
 )
@@ -159,9 +159,9 @@
 
 (define (merge_fields super-fields self-fields)
   (foldr (lambda (field acc)
-           (if (member field acc) ; se já está na super-fields
-               (append acc (list (string-append field "_old"))) ; então coloca um %1 no fim do nome para não dar conflito
-               (append acc (list field)))) ; caso contrário, só adiciona no acumulador
+           (if (member field acc) 
+               (append acc (list (string-append field "_old"))) 
+               (append acc (list field)))) 
         self-fields
         super-fields
   )
@@ -179,7 +179,6 @@
 )
 
 
-; Execução do código começa aqui
 (define (value-of-program prog)
   (empty-store)
   (match prog
@@ -187,10 +186,8 @@
      (begin
       (append_class "object" (class #f '() '()))
       (for ([decl decls])
-       (let* ([nome (ast:var-name (ast:decl-name decl))] ; Nome da Classe
-              [nome_super (ast:var-name (ast:decl-super decl))] ; Nome da Super-classe
-              ; [fields_super (class-name_fields (search_class nome_super))]
-              ; Nome Fields da classe atual e da super-classe
+       (let* ([nome (ast:var-name (ast:decl-name decl))] 
+              [nome_super (ast:var-name (ast:decl-super decl))]
               [fields (merge_fields (class-name_fields (search_class nome_super)) (map ast:var-name (ast:decl-fields decl)))] 
               [metodos (create_methods (ast:decl-methods decl) nome_super fields)]
               [classe (class nome_super fields metodos)]
