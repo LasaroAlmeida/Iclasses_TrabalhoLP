@@ -3,6 +3,9 @@
 ; Dener Luis Basílio Teodoro 201835001
 ; Lásaro de Almeida Deodoro  201835004
 
+; NOTA 30/35
+; Resolver a imutabilidade do let. Só tirar o newref
+
 (require dcc019/util/env
          dcc019/util/memory
          dcc019/exercise/iclasses/ast)

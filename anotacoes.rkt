@@ -63,7 +63,7 @@
 (define (apply_method method self args)
     ; cria uma referencia em memória para cada argumentos
   (let* ([args-refs (map newref args)] ;
-        ; pega o nome da classe super 
+        ; pega o nome da classe super (isso trata quando um método sobescreve o outro)
         ; extende um ambiente vazio associando super ao nome da classe super
         ; extende o ambiente novamente associando "self" ao objeto
         ; o ambiente de classe é criado
